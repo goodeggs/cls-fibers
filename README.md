@@ -1,6 +1,6 @@
 # cls-fibers
 
-Make continuation-local-storage play nice with node-fibers.
+Make [continuation-local-storage](https://github.com/othiym23/node-continuation-local-storage) play nice with [node-fibers](https://github.com/laverdet/node-fibers).
 
 [![NPM version](http://img.shields.io/npm/v/cls-fibers.svg?style=flat-square)](https://www.npmjs.org/package/cls-fibers)
 [![Build Status](http://img.shields.io/travis/goodeggs/cls-fibers.svg?style=flat-square)](https://travis-ci.org/goodeggs/cls-fibers)
