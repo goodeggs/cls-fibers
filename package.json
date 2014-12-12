@@ -1,0 +1,38 @@
+{
+  "name": "cls-fibers",
+  "version": "1.0.0",
+  "description": "Make continuation-local-storage play nice with node-fibers.",
+  "author": "Good Eggs <open-source@goodeggs.com>",
+  "contributors": [
+    "Bob Zoller <bob@zoller.us>",
+    "Aaron Borden <aaron@goodeggs.com>"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "fibers cls continuation local storage node-fibers"
+  ],
+  "main": "lib/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/goodeggs/cls-fibers.git"
+  },
+  "homepage": "https://github.com/goodeggs/cls-fibers",
+  "bugs": "https://github.com/goodeggs/cls-fibers/issues",
+  "peerDependencies": {
+    "fibers": "*",
+    "continuation-local-storage": "*"
+  },
+  "devDependencies": {
+    "coffee-script": ">=1.7.x",
+    "chai": "1.x.x",
+    "continuation-local-storage": "3.x.x",
+    "fibers": "1.x.x",
+    "mocha": "1.x.x"
+  },
+  "scripts": {
+    "compile": "coffee --bare --compile --output lib/ src/",
+    "prepublish": "npm run compile",
+    "pretest": "npm run compile",
+    "test": "mocha"
+  }
+}
