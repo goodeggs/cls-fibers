@@ -126,3 +126,40 @@ describe 'cls-fibers', ->
           done()
 
         ns.set 'foo', 2
+
+  describe 'concurrent fibers', ->
+    beforeEach ->
+      ns = createNamespace 'test.fibers.concurrent'
+      patchFibers(ns)
+
+    it 'isolates context between fibers', (done) ->
+
+      A = Future.wrap (callback) ->
+          ns.set 'func', 'A'
+          setTimeout ->
+            callback null, ns.get('func')
+          , 50
+
+      B = Future.wrap (callback) ->
+          ns.set 'func', 'B'
+          setTimeout ->
+            callback null, ns.get('func')
+          , 25
+
+      ns.run ->
+        #afuture = new Future()
+        #bfuture = new Future()
+
+        pending = 2
+        maybeDone = (err) ->
+          done(err) if err
+          done() if --pending is 0
+
+        A().resolve (err, a) ->
+          ns.get 'func'
+          expect(a).to.equal 'A'
+          maybeDone(err)
+
+        B().resolve (err, b) ->
+          expect(b).to.equal 'B'
+          maybeDone(err)
