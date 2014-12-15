@@ -99,3 +99,30 @@ describe 'cls-fibers', ->
           expect(resolveCalled).to.be.ok
           expect(ns.get 'foo').to.equal 1
           done()
+
+  describe 'Future.wrap', ->
+    {ns} = {}
+
+    beforeEach ->
+      ns = createNamespace 'test.future.wrap'
+      patchFibers(ns)
+
+    it 'runs in a new context', (done) ->
+      ns.run ->
+        ns.set 'foo', 0
+
+        start = Future.wrap (callback) ->
+          expect(ns.get 'foo').to.equal 1
+          ns.set 'foo', 3
+          process.nextTick ->
+            callback(null, ns.get 'foo')
+
+        ns.set 'foo', 1
+
+        future = start()
+        future.resolve (err, value) ->
+          expect(value).to.equal 3
+          expect(ns.get 'foo').to.equal 2
+          done()
+
+        ns.set 'foo', 2

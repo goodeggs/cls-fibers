@@ -23,4 +23,16 @@ module.exports = (ns) ->
     resolveArgs = []
     resolveArgs.push errorFuture if errorFuture
     resolveArgs.push ns.bind(handler, context)
-    resolveBefore.apply @, resolveArgs
+    return resolveBefore.apply @, resolveArgs
+
+
+  wrapBefore = Future.wrap.bind(Future)
+  Future.wrap = (args...) ->
+    [fn] = args
+
+    # Future.wrap takes objects or functions, we can ignore the object case
+    if typeof fn is 'function'
+      context = ns.createContext()
+      args[0] = ns.bind(fn, context)
+
+    return wrapBefore(args...)
