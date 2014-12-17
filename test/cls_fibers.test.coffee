@@ -3,11 +3,128 @@ patchFibers = require '..'
 Fiber = require 'fibers'
 Future = require 'fibers/future'
 {expect} = require 'chai'
+assert = require 'assert'
 
 describe 'cls-fibers', ->
   {ns} = {}
 
-  describe 'Fiber::run', ->
+  describe 'Fiber::run2', ->
+    beforeEach ->
+      ns = createNamespace 'test.fiber.run'
+      patchFibers(ns)
+
+    ctx = (name) ->
+      previous = ns.get('path') or []
+      # Treat as a Set (copy of array)
+      path = [name].concat previous
+      ns.set 'path', path
+      console.log {start: name, path, set: ns._set}
+      ->
+        path = ns.get 'path'
+        pop = path.shift()
+        console.log {end: name, path, set: ns._set}
+        # Restore the previous Set.
+        ns.set 'path', previous
+        assert.equal pop, name, 'context was not at the top of the stack'
+
+    next = process.nextTick.bind(process)
+
+    describe 'nextTick', ->
+      it 'handles children', (done) ->
+        # deep tree (line, child)
+        # {} - {} - {} - {}
+        # root - A - B - C
+        ns.run ->
+          endRoot = ctx 'root'
+          next ->
+            endA = ctx 'A'
+            next ->
+              endB = ctx 'B'
+              next ->
+                endC = ctx 'C'
+                endC()
+                endB()
+                endA()
+                endRoot()
+                done()
+
+      it 'handles siblings', (done) ->
+        # branch (sibling)
+        # {} - {} - {} - {}
+        #   \
+        #     {}
+        #
+        # root - A - B - C
+        #   \
+        #     - A' - B' - C'
+        ns.run ->
+          endRoot = ctx 'root'
+          pending = 2
+          tryDone = ->
+            if --pending is 0
+              endRoot()
+              done()
+
+          ns.run ->
+            next ->
+              endA = ctx 'A'
+              next ->
+                endB = ctx 'B'
+                next ->
+                  endC = ctx 'C'
+                  endC()
+                  endB()
+                  endA()
+                  tryDone()
+
+          ns.run ->
+            next ->
+              endA = ctx "A^"
+              next ->
+                endB = ctx "B^"
+                next ->
+                  endC = ctx 'C^'
+                  endC()
+                  endB()
+                  endA()
+                  tryDone()
+
+
+    xit 'pops on yield', (done) ->
+      ctx = (name) ->
+        console.log "before #{name}: #{ns.get 'ctx'}"
+        ns.set 'ctx', name
+
+      A = Future.wrap (callback) ->
+        ctx 'enter future'
+        setTimeout ->
+          ctx 'exit future'
+          callback()
+        , 50
+        ctx 'yield future'
+
+      queueWork ->
+        blah()
+        blah()
+        setTiemout ->
+          done()
+      ns.run ->
+        ctx 'before run'
+        setTimeout ->
+          ctx 'enter'
+        , 1
+        Fiber ->
+          #sync
+          ctx 'enter fiber'
+
+          #async
+          A().wait()
+          ctx 'exit fiber'
+        .run()
+        ctx 'after run'
+
+
+  xdescribe 'Fiber::run', ->
     beforeEach ->
       ns = createNamespace 'test.fiber.run'
       patchFibers(ns)
@@ -29,7 +146,7 @@ describe 'cls-fibers', ->
         expect(A.run()).to.equal 'A'
         done()
 
-  describe 'Future::resolve', ->
+  xdescribe 'Future::resolve', ->
     {ns} = {}
 
     beforeEach ->
@@ -78,7 +195,7 @@ describe 'cls-fibers', ->
         expect(ns.get 'foo').to.equal 1
         done()
 
-    describe 'with two arguments', ->
+    xdescribe 'with two arguments', ->
       it 'wraps the second argument with its own context', (done) ->
         ns.run ->
           resolveCalled = false
@@ -100,7 +217,7 @@ describe 'cls-fibers', ->
           expect(ns.get 'foo').to.equal 1
           done()
 
-  describe 'Future.wrap', ->
+  xdescribe 'Future.wrap', ->
     {ns} = {}
 
     beforeEach ->
@@ -127,7 +244,7 @@ describe 'cls-fibers', ->
 
         ns.set 'foo', 2
 
-  describe 'concurrent fibers', ->
+  xdescribe 'concurrent fibers', ->
     beforeEach ->
       ns = createNamespace 'test.fibers.concurrent'
       patchFibers(ns)
