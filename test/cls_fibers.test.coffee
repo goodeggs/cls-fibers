@@ -90,6 +90,33 @@ describe 'cls-fibers', ->
                   tryDone()
 
 
+          # For fibers...
+          #
+          # When a fiber runs for the first time, we want a new state (a child
+          # of the active one probably). We should save the previous state so
+          # that we can restore it when the fiber yields.  When the fiber
+          # yields, we save the fiber state. With the fiber yielded, we want
+          # the previous state to be active, so we should restore the previous
+          # state.
+          #
+          # When the fiber runs again, we want to restore the saved fiber
+          # state. It's not just a single context that should be restored, it's
+          # the whole state.  The fiber context (when the fiber started) wont't
+          # always be at the top of the stack, it's possible additional
+          # contexts were created* during the fiber run, so the active one
+          # should be whatever context that was active when the fiber yielded.
+          #
+          # I'm purposefully avoiding the words "enter/exit" and "context"
+          # because I don't think that's really what we're talking about. We're
+          # not pushing/poping individual contexts, we're swapping out a whole
+          # stack of contexts... I think.
+          #
+          # * So maybe in theory contexts might be added to the stack during a
+          # fiber run, but wouldn't that mean something was actually put on the
+          # event loop? In which case it would no longer be in the fiber. This
+          # is either a corner case we need to code for, or a chance for
+          # optimization.
+
     xit 'pops on yield', (done) ->
       ctx = (name) ->
         console.log "before #{name}: #{ns.get 'ctx'}"
