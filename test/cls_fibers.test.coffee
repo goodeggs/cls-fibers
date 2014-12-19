@@ -4,50 +4,118 @@ Fiber = require 'fibers'
 Future = require 'fibers/future'
 {expect} = require 'chai'
 assert = require 'assert'
+q = require 'q'
 
 describe 'cls-fibers', ->
   {ns} = {}
 
-  describe 'Fiber::run2', ->
+  describe 'fiber stack', ->
+    next = Future.wrap process.nextTick.bind(process)
+    {ns} = {}
+
+    beforeEach ->
+      ns = createNamespace 'test.fibers.stack'
+
+    it 'handles siblings', (done) ->
+      # branch (sibling)
+      # {} - {} - {} - {}
+      #   \
+      #     {}
+      #
+      # root - A - B - C
+      #   \
+      #     - A' - B' - C'
+      ns.run ->
+        pending = 2
+        tryDone = ->
+          if --pending is 0
+            done()
+
+        ns.set 'path', ['root']
+        ns.run ->
+          console.log 1
+          defer = q.defer()
+          fiber = Fiber ->
+            console.log 2
+            Fiber.yield()
+            defer.resolve()
+            #ns.set 'id', 1
+            #ns.get('path').push 'A'
+            #next().wait()
+            #ns.get('path').push 'B'
+            #next().wait()
+            #ns.get('path').push 'C'
+            #next().wait()
+            #console.log(ns.get 'path')
+            #expect(ns.get 'path').to.eql ['root', 'A', 'B', 'C']
+            #tryDone()
+
+          fiber.run()
+
+          defer.promise.then ->
+            console.log 3
+            done()
+
+          fiber.run()
+
+        ns.run ->
+          Fiber ->
+            expect(ns.get 'id').not.to.be.ok
+            ns.set 'id', 2
+            ns.get('path').push 'A^'
+            next().wait()
+            ns.get('path').push 'B^'
+            next().wait()
+            ns.get('path').push 'C^'
+            next().wait()
+            console.log(ns.get 'path')
+            expect(ns.get 'path').to.eql ['root', 'A^', 'B^', 'C^']
+            tryDone()
+          .run()
+
+  xdescribe 'Fiber::run2', ->
     beforeEach ->
       ns = createNamespace 'test.fiber.run'
-      patchFibers(ns)
+      #patchFibers(ns)
 
     ctx = (name) ->
+
+      #fiber.run
       previous = ns.get('path') or []
+      # if fiberState
+      #   ns._set = fiberState
       # Treat as a Set (copy of array)
       path = [name].concat previous
       ns.set 'path', path
       console.log {start: name, path, set: ns._set}
       ->
+        #fiber.yield
+        # fiber yields
+        # fiberState = copy ns._set
         path = ns.get 'path'
         pop = path.shift()
         console.log {end: name, path, set: ns._set}
         # Restore the previous Set.
         ns.set 'path', previous
+        # ns._set = previous
         assert.equal pop, name, 'context was not at the top of the stack'
 
 
-    describe 'nextTick', ->
+    xdescribe 'nextTick', ->
       next = process.nextTick.bind(process)
 
       it 'handles children', (done) ->
         # deep tree (line, child)
         # {} - {} - {} - {}
         # root - A - B - C
+        endRoot = null
         ns.run ->
           endRoot = ctx 'root'
-          next ->
-            endA = ctx 'A'
-            next ->
-              endB = ctx 'B'
-              next ->
-                endC = ctx 'C'
-                endC()
-                endB()
-                endA()
-                endRoot()
-                done()
+
+        ns.run ->
+          endRoot()
+          done()
+
 
       it 'handles siblings', (done) ->
         # branch (sibling)
@@ -119,9 +187,7 @@ describe 'cls-fibers', ->
     # optimization.
 
     describe 'fibers', ->
-      next = Future.wrap (callback) ->
-        process.nextTick ->
-          callback()
+      next = Future.wrap process.nextTick.bind(process)
 
       it 'handles children', (done) ->
         # deep tree (line, child)
