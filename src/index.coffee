@@ -3,7 +3,7 @@ Fiber = require 'fibers'
 module.exports = (ns) ->
   runBefore = Fiber::run
   Fiber::run = (args...) ->
-    context = @__cls ?= ns.createContext()
+    context = ns.active
     ns.enter context
     try
       return runBefore.call @, args...
