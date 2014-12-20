@@ -27,7 +27,9 @@
     "chai": "1.x.x",
     "continuation-local-storage": "3.x.x",
     "fibers": "1.x.x",
-    "mocha": "1.x.x"
+    "mocha": "1.x.x",
+    "sinon": "~1.12.2",
+    "sinon-chai": "~2.6.0"
   },
   "scripts": {
     "compile": "coffee --bare --compile --output lib/ src/",

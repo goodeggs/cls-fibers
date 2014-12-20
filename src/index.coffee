@@ -1,38 +1,29 @@
 Fiber = require 'fibers'
-assert = require 'assert'
-
-# TODO Too heavy?
-class CLSChain
-  constructor: (ns) ->
-    @ns = ns
-    @active = ns.active
-
-    # Copy the context set
-    @_set = [].concat ns._set
-
-  save: ->
-    @active = @ns.active
-    assert.equal @_set, @ns._set, "Another CLS chain has already been resumed"
-
-  resume: ->
-    @ns.active = @active
-    @ns._set = @_set
-
+FiberCLS = require './fiber_cls'
 
 module.exports = (ns) ->
   runBefore = Fiber::run
   Fiber::run = (args...) ->
+    cls = @__cls ?= new FiberCLS(ns)
+
     # Swap the CLS context chain, save a copy of the current chain for when the fiber yields.
-    preservedChain = new CLSChain(ns)
-    @__fiberChain ?= new CLSChain(ns)
-    @__fiberChain.resume()
-    context = @__fiberChain.active
-    ns.enter context
+    # Distinguish between fiber run for the first time, or a resume
+    if cls.yielding
+      cls.resume()
+    else
+      cls.run()
+
     try
       return runBefore.call @, args...
     finally
-      #TODO optimize for the fiber being done vs yielding. If the fiber is done, no need to save the chain.
-      @__fiberChain.save()
-      ns.exit context
-      preservedChain.resume()
+      unless cls.yielding
+        cls.end()
+        delete @__cls
 
+  yieldBefore = Fiber.yield
+  Fiber.yield = (args...) ->
+    cls = Fiber.current?.__cls
+    if cls
+      cls.yield()
+
+    yieldBefore(args...)
