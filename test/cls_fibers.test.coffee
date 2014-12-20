@@ -39,6 +39,29 @@ describe 'cls-fibers', ->
         fiber.run()
         expect(ns.get 'data').not.to.be.ok
 
+    describe 'resuming fiber', ->
+      it 'has the context where it left off', ->
+        ns.run ->
+          fiber = Fiber ->
+            ns.run ->
+              ns.set 'data', 1
+              Fiber.yield()
+              expect(ns.get 'data').to.equal 1
+
+          fiber.run()
+          ns.set 'data', 2
+          fiber.run()
+
+      it 'can be affected by context modifications during the yield', ->
+        ns.run ->
+          fiber = Fiber ->
+            ns.set 'data', 1
+            Fiber.yield()
+            expect(ns.get 'data').to.equal 2
+
+          fiber.run()
+          ns.set 'data', 2
+          fiber.run()
 
   describe 'concurrent fibers', ->
     it 'uses the active context', (done) ->

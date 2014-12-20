@@ -1,7 +1,7 @@
 Fiber = require 'fibers'
 
 # TODO Too heavy?
-class Stack
+class CLSChain
   constructor: (ns) ->
     @ns = ns
     @active = ns.active
@@ -17,12 +17,17 @@ class Stack
 module.exports = (ns) ->
   runBefore = Fiber::run
   Fiber::run = (args...) ->
-    preservedStack = new Stack(ns)
-    context = @__cls ?= ns.active
+    preservedChain = new CLSChain(ns)
+    if @__fiberChain
+      # Resuming the fiber, resume the CLS chain as well
+      @__fiberChain.resume()
+    context = ns.active
     ns.enter context
     try
       return runBefore.call @, args...
     finally
+      #TODO optimize for the fiber being done vs yielding. If the fiber is done, no need to save the chain.
+      @__fiberChain = new CLSChain(ns)
       ns.exit context
-      preservedStack.resume()
+      preservedChain.resume()
 
