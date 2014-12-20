@@ -11,57 +11,95 @@ describe 'cls-fibers', ->
     ns = createNamespace 'test'
     patchFibers(ns)
 
-  describe 'synchronous fiber', ->
-    it 'keeps context isolated', ->
+  describe 'fiber runs', ->
+    it 'reads from the active context', ->
+        ns.run ->
+          ns.set 'data', 1
+          sentinel = ns.active
+          Fiber ->
+            expect(ns.get 'data').to.equal 1
+            expect(ns.active).to.equal sentinel
+          .run()
+
+  describe 'fiber ends', ->
+    it 'writes to the active context', ->
+      sentinel = null
       ns.run ->
         Fiber ->
-          ns.run ->
-            ns.set 'data', 1
+          ns.set 'data', 1
+          sentinel = ns.active
         .run()
+        expect(ns.get 'data').to.equal 1
+        expect(ns.active).to.equal sentinel
 
-        expect(ns.get 'data').not.to.be.ok
-
-    it 'has access to scope where it was defined', ->
-      ns.run ->
-        ns.set 'data', 1
-        Fiber ->
-          expect(ns.get 'data').to.be.equal 1
-        .run()
-
-  describe 'yielding fiber', ->
-    it 'keeps the context isolated', ->
-      ns.run ->
-        fiber = Fiber ->
-          ns.run ->
+  describe 'fiber yields', ->
+    describe 'inside parent context', ->
+      it 'shares the active context', ->
+        sentinel = null
+        ns.run ->
+          Fiber ->
             ns.set 'data', 1
+            sentinel = ns.active
             Fiber.yield()
+          .run()
+          expect(ns.get 'data').to.equal 1
+          expect(ns.active).to.equal sentinel
 
-        fiber.run()
-        expect(ns.get 'data').not.to.be.ok
+    describe 'inside a child context', ->
+      it 'preserves the context before the fiber', ->
+        ns.run ->
+          sentinel = ns.active
+          Fiber ->
+            ns.run ->
+              ns.set 'data', 1
+              Fiber.yield()
+          .run()
+          expect(ns.get 'data').not.to.be.ok
+          expect(ns.active).to.equal sentinel
 
-    describe 'resuming fiber', ->
-      it 'has the context where it left off', ->
+  describe 'fiber resumes', ->
+    describe 'from yield in child context', ->
+      it 'has the context where it yielded', ->
         ns.run ->
           fiber = Fiber ->
             ns.run ->
               ns.set 'data', 1
+              sentinel = ns.active
               Fiber.yield()
               expect(ns.get 'data').to.equal 1
+              expect(ns.active).to.equal sentinel
 
           fiber.run()
-          ns.set 'data', 2
           fiber.run()
 
-      it 'can be affected by context modifications during the yield', ->
+    describe 'from yield in parent context', ->
+      it 'has modifications made during the yield', ->
         ns.run ->
           fiber = Fiber ->
-            ns.set 'data', 1
             Fiber.yield()
-            expect(ns.get 'data').to.equal 2
+            expect(ns.get 'data').to.equal 1
+            expect(ns.active).to.equal sentinel
 
           fiber.run()
-          ns.set 'data', 2
+          ns.set 'data', 1
+          sentinel = ns.active
           fiber.run()
+
+    describe 'with chained contexts', ->
+      it 'uses the context from the yield point', ->
+        ns.run ->
+          fiber = Fiber ->
+            sentinel = ns.active
+            ns.run ->
+              ns.set 'data', 1
+              Fiber.yield()
+
+            expect(ns.get 'data').not.to.be.ok
+            expect(ns.active).to.equal sentinel
+
+          fiber.run()
+          fiber.run()
+
 
   describe 'concurrent fibers', ->
     it 'uses the active context', (done) ->
