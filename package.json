@@ -19,8 +19,7 @@
   "homepage": "https://github.com/goodeggs/cls-fibers",
   "bugs": "https://github.com/goodeggs/cls-fibers/issues",
   "peerDependencies": {
-    "fibers": "*",
-    "continuation-local-storage": "*"
+    "fibers": "*"
   },
   "devDependencies": {
     "coffee-script": ">=1.7.x",
