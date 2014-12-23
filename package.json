@@ -1,6 +1,6 @@
 {
   "name": "cls-fibers",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Make continuation-local-storage play nice with node-fibers.",
   "author": "Good Eggs <open-source@goodeggs.com>",
   "contributors": [
