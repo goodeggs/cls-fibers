@@ -5,7 +5,7 @@ class FiberCLS
   constructor: (ns) ->
     @ns = ns
     @yielding = no
-    @context = @ns.active
+    @context = @ns.active or @ns.createContext() # Mimic behavior of ns.bind
 
   run: ->
     assert !@fiberChain, 'FiberCLS::run should only be called once, when the fiber is run for the first time.'
